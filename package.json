@@ -1,0 +1,14 @@
+{
+  "name": "react-native-dnd",
+  "version": "0.1.0",
+  "description": "Drag and Drop library for React Native",
+  "main": "./src/index.js",
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Ranjan Shrestha",
+  "license": "MIT"
+}
