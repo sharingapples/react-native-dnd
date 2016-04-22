@@ -18,12 +18,10 @@
  */
 'use strict';
 
-const React = require('react-native');
-const { View, StyleSheet } = React;
+import React, { View, StyleSheet } from 'react-native';
 
 // The number of milliseconds after which the drag over event is called
 const DRAG_IMPL_TIMER = 10;
-
 
 class DragDropContext extends React.Component {
   constructor(props, context) {
