@@ -56,8 +56,9 @@ class DragSource extends React.Component {
   }
 
   render() {
+    const { style, onLayout } = this.props;
     return (
-      <View style={this.props.style} {...this.panResponder.panHandlers}>
+      <View style={style} onLayout={onLayout} {...this.panResponder.panHandlers}>
         { this.props.children }
       </View>
     );
@@ -70,6 +71,7 @@ DragSource.contextTypes = {
 
 DragSource.propTypes = {
   style: View.propTypes.style,
+  onLayout: PropTypes.func,
   getDragHandle: PropTypes.func.isRequired,
   onDragStart: PropTypes.func.isRequired,
   onDragCancel: PropTypes.func.isRequired,
