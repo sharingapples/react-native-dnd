@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # mac files
 .DS_Store
 
@@ -7,3 +8,14 @@
 # Ignore npm debug log
 npm-debug.log
 
+=======
+# Mac specific files
+.DS_Store
+
+# Jetbrains specific files
+.idea
+
+# npm specific files
+node_modules
+npm-debug.log
+>>>>>>> develop
