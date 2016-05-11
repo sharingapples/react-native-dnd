@@ -1,6 +1,6 @@
 {
   "name": "react-native-dnd",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Drag and Drop library for React Native",
   "main": "./src/index.js",
   "files": [
