@@ -18,12 +18,10 @@
  */
 'use strict';
 
-const React = require('react-native');
-const { View, StyleSheet } = React;
+import React, { View, StyleSheet } from 'react-native';
 
 // The number of milliseconds after which the drag over event is called
 const DRAG_IMPL_TIMER = 10;
-
 
 class DragDropContext extends React.Component {
   constructor(props, context) {
@@ -36,6 +34,15 @@ class DragDropContext extends React.Component {
     };
     this.timer = null;
     this.updateTarget = this.updateTarget.bind(this);
+  }
+
+  /**
+   * Retrieve the scale factor of the underlying view that renders all the
+   * drag sources and drop targets
+   * @return {number} A scale which is by default 1
+   */
+  get scale() {
+    return this.props.scale;
   }
 
   /* React method for providing the context for DragSource and DragTarget */
@@ -199,6 +206,11 @@ class DragDropContext extends React.Component {
 DragDropContext.propTypes = {
   style: View.propTypes.style,
   getDragObject: React.PropTypes.func.isRequired,
+  scale: React.PropTypes.number,
+};
+
+DragDropContext.defaultProps = {
+  scale: 1,
 };
 
 DragDropContext.childContextTypes = {
