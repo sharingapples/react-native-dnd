@@ -19,7 +19,10 @@ class DragSource extends React.Component {
   // The drag has started on the element
   onDragStart(e, gesture) {
     // Keep the coordinates where the drag started.
-    const[x, y] = [gesture.x0, gesture.y0];
+    const[x, y] = [
+      gesture.x0 * this.context.dragDropContext.scale,
+      gesture.y0 * this.context.dragDropContext.scale
+    ];
     this.dragHandle = this.props.getDragHandle(x, y);
     this.dragStartX = x;
     this.dragStartY = y;
@@ -41,14 +44,20 @@ class DragSource extends React.Component {
     }
 
     // Do the first move
-    const [x, y] = [gesture.moveX, gesture.moveY];
+    const [x, y] = [
+      gesture.moveX * this.context.dragDropContext.scale,
+      gesture.moveY * this.context.dragDropContext.scale,
+    ];
     this.context.dragDropContext.updateDrag(this.dragHandle, x, y);
   }
 
   // The drag has end now
   onDragEnd(e, gesture) {
     if (this.dragged) {
-      const [x, y] = [gesture.moveX, gesture.moveY];
+      const [x, y] = [
+        gesture.moveX * this.context.dragDropContext.scale,
+        gesture.moveY * this.context.dragDropContext.scale,
+      ];
       if (!this.context.dragDropContext.endDrag(this.dragHandle, x, y)) {
         this.props.onDragCancel(this.dragHandle);
       }
