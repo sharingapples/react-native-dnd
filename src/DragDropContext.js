@@ -61,7 +61,7 @@ class DragDropContext extends React.Component {
   unregister(target) {
     const idx = this.dropTargets.indexOf(target);
     if (idx !== -1) {
-      this.dropTargets.slice(idx, 1);
+      this.dropTargets.splice(idx, 1);
     } else if (__DEV__) {
       console.error('Unregistering target from a DragDropContext that has\'t been registered');
     }
