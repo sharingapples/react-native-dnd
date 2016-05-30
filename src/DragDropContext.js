@@ -29,6 +29,7 @@ class DragDropContext extends React.Component {
     this.dropTargets = [];
     this.state = {
       drag: null,
+      handle: null,
       dragX: 0,
       dragY: 0,
     };
@@ -139,6 +140,15 @@ class DragDropContext extends React.Component {
     if (this.timer != null) {
       clearTimeout(this.timer);
       this.timer = null;
+    }
+  }
+
+  updateHandle(callback) {
+    if (callback(this.state.handle)) {
+      const dragObject = this.props.getDragObject(this.state.handle, this.state.dragX, this.state.dragY);
+      this.setState({
+        drag: dragObject,
+      });
     }
   }
 
