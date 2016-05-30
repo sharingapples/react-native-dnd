@@ -21,7 +21,7 @@ class DragSource extends React.Component {
     // Keep the coordinates where the drag started.
     const[x, y] = [
       gesture.x0 * this.context.dragDropContext.scale,
-      gesture.y0 * this.context.dragDropContext.scale
+      gesture.y0 * this.context.dragDropContext.scale,
     ];
     this.dragHandle = this.props.getDragHandle(x, y);
     this.dragStartX = x;
