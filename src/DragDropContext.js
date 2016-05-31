@@ -55,7 +55,18 @@ class DragDropContext extends React.Component {
 
   /* Method invoked by DragTarget for registration */
   register(target) {
-    this.dropTargets.push(target);
+    // Order the target based on the zIndex, Keep the target with the higher
+    // zIndex at the beginning, if the target has the same zIndex as the existing
+    // target, it must be inserted at the end of the targets with the same
+    // zIndex
+    let pos = this.dropTargets.length;
+    while (pos > 0) {
+      const tmp = this.dropTargets[--pos];
+      if (target.props.zIndex < tmp.props.zIndex)
+        break;
+    }
+
+    this.dropTargets.splice(pos, 0, target);
   }
 
   /* Method invoked by DragTarget for removal */

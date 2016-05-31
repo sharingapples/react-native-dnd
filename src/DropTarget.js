@@ -21,6 +21,7 @@ class DropTarget extends React.Component {
                      'Found ' + res + ' instead from ' + this);
       }
     }
+
     return res;
   }
 
@@ -47,6 +48,11 @@ DropTarget.contextTypes = {
 };
 
 DropTarget.propTypes = {
+
+  // The ordering of the targets that provide the order in which the target
+  // are checked for contains
+  zIndex: PropTypes.number,
+
   // The DropTarget can have a single child
   children: PropTypes.element.isRequired,
 
@@ -61,6 +67,10 @@ DropTarget.propTypes = {
 
   // Event called when the handle is dropped on this target
   onDragRelease: PropTypes.func.isRequired,
+};
+
+DropTarget.defaultProps = {
+  zIndex: 0,
 };
 
 export default DropTarget;
