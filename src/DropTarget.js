@@ -1,6 +1,6 @@
 'use strict';
 
-import React, { Component, PropTypes, Children } from 'react-native';
+import React, { Component, PropTypes, Children } from 'react';
 
 class DropTarget extends React.Component {
 
