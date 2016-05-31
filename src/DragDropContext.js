@@ -18,7 +18,7 @@
  */
 'use strict';
 
-import React, { View, StyleSheet } from 'react-native';
+import React, { View, StyleSheet } from 'react';
 
 // The number of milliseconds after which the drag over event is called
 const DRAG_IMPL_TIMER = 10;

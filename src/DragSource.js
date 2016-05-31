@@ -1,6 +1,7 @@
 'use strict';
 
-import React, { Component, View, PanResponder, PropTypes } from 'react-native';
+import React, { Component, View, PropTypes } from 'react';
+import { PanResponder } from 'react-native';
 
 class DragSource extends React.Component {
   constructor(props) {
