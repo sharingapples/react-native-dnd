@@ -48,3 +48,5 @@ git tag latest -f
 
 git push origin $next_ref
 git push origin latest -f
+
+npm publish --registry https://registry.npmjs.org/
