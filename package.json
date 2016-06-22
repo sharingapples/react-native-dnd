@@ -16,7 +16,7 @@
   "author": "Ranjan Shrestha",
   "license": "MIT",
   "peerDeependencies": {
-    "react-native": "^0.26.0"
+    "react-native": "^0.28.0"
   },
   "devDependencies": {
     "chai": "^3.5.0",
