@@ -1,4 +1,6 @@
-### Working Copy
+### Version 0.1.4
+2016-Jun-22: onDragCancel replaced by onDragEnd on DragSource. onDragEnd is
+             trigged with a cancel status on the parameter.
 
 ### Version 0.1.2
 2016-May-11: Added scale property in the DragDropContext for taking the
