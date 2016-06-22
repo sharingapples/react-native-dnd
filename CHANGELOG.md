@@ -1,4 +1,4 @@
-### Version 0.1.4
+### Version 0.1.5
 2016-Jun-22: onDragCancel replaced by onDragEnd on DragSource. onDragEnd is
              trigged with a cancel status on the parameter.
 
