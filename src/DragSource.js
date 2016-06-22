@@ -59,9 +59,8 @@ class DragSource extends React.Component {
         gesture.moveX * this.context.dragDropContext.scale,
         gesture.moveY * this.context.dragDropContext.scale,
       ];
-      if (!this.context.dragDropContext.endDrag(this.dragHandle, x, y)) {
-        this.props.onDragCancel(this.dragHandle);
-      }
+      this.props.onDragEnd(this.dragHandle,
+          !this.context.dragDropContext.endDrag(this.dragHandle, x, y));
     }
   }
 
@@ -84,7 +83,7 @@ DragSource.propTypes = {
   onLayout: PropTypes.func,
   getDragHandle: PropTypes.func.isRequired,
   onDragStart: PropTypes.func.isRequired,
-  onDragCancel: PropTypes.func.isRequired,
+  onDragEnd: PropTypes.func.isRequired,
 };
 
 export default DragSource;
