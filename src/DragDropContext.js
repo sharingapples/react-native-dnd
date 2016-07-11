@@ -205,10 +205,6 @@ class DragDropContext extends Component {
     return res;
   }
 
-  getDraggingInstance() {
-    return this.refs.draggingInstance;
-  }
-
   render() {
     const { drag, dragX, dragY } = this.state;
     return (
