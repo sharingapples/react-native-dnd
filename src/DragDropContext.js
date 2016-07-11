@@ -18,12 +18,14 @@
  */
 'use strict';
 
-import React, { View, StyleSheet } from 'react';
+import React, { Component, PropTypes } from 'react';
+import { View, StyleSheet } from 'react-native';
+import DragObject from './DragObject';
 
 // The number of milliseconds after which the drag over event is called
 const DRAG_IMPL_TIMER = 10;
 
-class DragDropContext extends React.Component {
+class DragDropContext extends Component {
   constructor(props, context) {
     super(props, context);
     this.dropTargets = [];
@@ -138,12 +140,7 @@ class DragDropContext extends React.Component {
 
     // Directly setting the coordinates, skipping the
     // react render flow
-    this.refs.drag.setNativeProps({
-      style: {
-        left: x,
-        top: y,
-      },
-    });
+    this.refs.drag.updatePosition(x, y);
   }
 
   componentWillUnmount() {
@@ -154,13 +151,12 @@ class DragDropContext extends React.Component {
     }
   }
 
-  updateHandle(callback) {
-    if (callback(this.state.handle)) {
-      const dragObject = this.props.getDragObject(this.state.handle, this.state.dragX, this.state.dragY);
-      this.setState({
-        drag: dragObject,
-      });
-    }
+  updateHandle(handle) {
+    const dragObject = this.props.getDragObject(handle, this.state.dragX, this.state.dragY);
+    this.setState({
+      drag: dragObject,
+      handle: handle,
+    });
   }
 
   updateTarget() {
@@ -209,16 +205,16 @@ class DragDropContext extends React.Component {
     return res;
   }
 
+  getDraggingInstance() {
+    return this.refs.draggingInstance;
+  }
+
   render() {
     const { drag, dragX, dragY } = this.state;
     return (
       <View style={this.props.style}>
         { this.props.children }
-        { drag &&
-          <View ref="drag"
-                style={[styles.holder, { left: dragX, top: dragY }]}>
-            {drag}
-          </View> }
+        <DragObject ref="drag" object={drag} x={dragX} y={dragY} />
       </View>
     );
   }
@@ -226,8 +222,8 @@ class DragDropContext extends React.Component {
 
 DragDropContext.propTypes = {
   style: View.propTypes.style,
-  getDragObject: React.PropTypes.func.isRequired,
-  scale: React.PropTypes.number,
+  getDragObject: PropTypes.func.isRequired,
+  scale: PropTypes.number,
 };
 
 DragDropContext.defaultProps = {
@@ -235,7 +231,7 @@ DragDropContext.defaultProps = {
 };
 
 DragDropContext.childContextTypes = {
-  dragDropContext: React.PropTypes.object,
+  dragDropContext: PropTypes.object,
 };
 
 const styles = StyleSheet.create({
