@@ -14,15 +14,7 @@ class DropTarget extends React.Component {
   }
 
   contains(handle, x, y) {
-    const res = this.props.contains(handle, x, y);
-    if (__DEV__) {
-      if (typeof res !== 'boolean') {
-        console.warn('The contains method of a DropTarget must return a boolean.' +
-                     'Found ' + res + ' instead from ' + this);
-      }
-    }
-
-    return res;
+    return this.props.contains(handle, x, y);
   }
 
   onDragOver(handle, x, y) {

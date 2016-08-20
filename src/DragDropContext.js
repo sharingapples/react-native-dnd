@@ -23,20 +23,13 @@ import { View, StyleSheet } from 'react-native';
 import DragObject from './DragObject';
 
 // The number of milliseconds after which the drag over event is called
-const DRAG_IMPL_TIMER = 10;
+const DRAG_IMPL_TIMER = 5;
 
 class DragDropContext extends Component {
   constructor(props, context) {
     super(props, context);
-    this.dropTargets = [];
-    this.state = {
-      drag: null,
-      handle: null,
-      dragX: 0,
-      dragY: 0,
-    };
-    this.timer = null;
-    this.updateTarget = this.updateTarget.bind(this);
+    this._dropTargets = [];
+    this._timer = null;
   }
 
   /**
@@ -55,162 +48,135 @@ class DragDropContext extends Component {
     };
   }
 
-  /* Method invoked by DragTarget for registration */
+  /* Method invoked by DropTarget for registration */
   register(target) {
     // Order the target based on the zIndex, Keep the target with the higher
     // zIndex at the beginning, if the target has the same zIndex as the existing
     // target, it must be inserted at the end of the targets with the same
     // zIndex
-    let pos = this.dropTargets.length;
-    while (pos > 0) {
-      const tmp = this.dropTargets[--pos];
-      if (target.props.zIndex < tmp.props.zIndex)
-        break;
-    }
+    this._dropTargets.push(target);
 
-    this.dropTargets.splice(pos, 0, target);
+    // order by zIndex in descending order,
+    this._dropTargets.sort((a, b) => ((b.props.zIndex || 0) - (a.props.zIndex || 0)));
   }
 
   /* Method invoked by DragTarget for removal */
   unregister(target) {
-    const idx = this.dropTargets.indexOf(target);
+    const idx = this._dropTargets.indexOf(target);
     if (idx !== -1) {
-      this.dropTargets.splice(idx, 1);
+      this._dropTargets.splice(idx, 1);
     } else if (__DEV__) {
       console.error('Unregistering target from a DragDropContext that has\'t been registered');
     }
   }
 
-  _findTarget(handle, x, y) {
-    return this.dropTargets.find(target => target.contains(handle, x, y));
+  /**
+   * Helper method based on promise to find the target for the given
+   * dragging input
+   */
+  _findTarget(dragging) {
+    const { handle, x, y }  = dragging;
+    return Promise.all(
+      this._dropTargets.map(target => target.contains(handle, x, y))
+    ).then(res => {
+      const idx = res.indexOf(true);
+      return idx === -1 ? null : this._dropTargets[idx];
+    });
   }
+
   /**
    * Drag start event. Called from DragSource. The method is respon
    * @param  {object} handle The object that is being dragged
    * @param  {number} x      [description]
    * @param  {number} y      [description]
    */
-  startDrag(handle, x, y) {
-    // Get the drag object from the application
-    const dragObject = this.props.getDragObject(handle, x, y);
+  startDrag(dragging) {
+    // Update the drag UI
+    const { x, y, element } = dragging;
+    this.refs.drag.update(x, y, element);
 
-    // if the application doesn't want the default drag over
-    // visualisation it would return null here
-    if (dragObject != null) {
-      this.setState({
-        drag: dragObject,
-        dragX: x,
-        dragY: y,
-      });
-    } else {
-      // Don't want the render to be invoked
-      this.state.drag = null;
-      this.state.handle = handle;
-      this.state.dragX = x;
-      this.state.dragY = y;
-    }
-
-    // Keep track of the target
-    this.target = this._findTarget(handle, x, y);
-    if (this.target != null) {
-      this.target.onDragOver(handle, x, y);
-    }
+    // get the target
+    this._updateTarget(dragging);
   }
 
-  updateDrag(handle, x, y) {
+  updateDrag(dragging) {
     // Clear out any pending timeout because of a previous drag
-    if (this.timer != null) {
-      clearTimeout(this.timer);
+    if (this._timer != null) {
+      clearTimeout(this._timer);
     }
-
-    // Keep track of the state
-    this.state.handle = handle;
-    this.state.dragX = x;
-    this.state.dragY = y;
 
     // Start the drag timer. Using this timer to make the drag
     // as smooth as possible, by defering the processing to a
     // later point when the user keeps the drag still
-    this.timer = setTimeout(this.updateTarget, DRAG_IMPL_TIMER);
+    this._timer = setTimeout(this._updateTarget.bind(this, dragging), DRAG_IMPL_TIMER);
 
-    // if the drag isn't affecting the visualation no need to do anyting
-    if (!this.state.drag) {
-      return;
+    // Update the drag UI
+    const { x, y, element } = dragging;
+    this.refs.drag.update(x, y, element);
+  }
+
+  /**
+   * Ends the current drag
+   * @return true if the drag ended on some target
+   */
+  endDrag(dragging) {
+    // Clear the drag UI
+    this.refs.drag.update(null, null, null);
+
+    // Clear any timer that might have been initialized during drag
+    if (this._timer !== null) {
+      clearTimeout(this._timer);
+      this._timer = null;
     }
 
-    // Directly setting the coordinates, skipping the
-    // react render flow
-    this.refs.drag.updatePosition(x, y);
+    // Update the target
+    return this._updateTarget(dragging).then(() => {
+      // Release the drag
+      const { handle, target, x, y } = dragging;
+      if (target) {
+        target.onDragRelease(handle, x, y);
+        // The drag was not cancelled
+        return false;
+      } else {
+        // the drag was cancelled
+        return true;
+      }
+    });
   }
 
   componentWillUnmount() {
     // Free the timer if there was any set
-    if (this.timer != null) {
-      clearTimeout(this.timer);
-      this.timer = null;
+    if (this._timer != null) {
+      clearTimeout(this._timer);
+      this._timer = null;
     }
   }
 
-  updateHandle(handle) {
-    const dragObject = this.props.getDragObject(handle, this.state.dragX, this.state.dragY);
-    this.setState({
-      drag: dragObject,
-      handle: handle,
+  _updateTarget(dragging) {
+    // The timer has expired update the target with the drag state
+    const { handle, target, x, y } = dragging;
+    this._timer = null;
+
+    // Check if there is any change in the drop target
+    return this._findTarget(dragging).then(newTarget => {
+      if (target !== newTarget) {
+        // Do the DragOut event on the older target
+        if (target)
+          target.onDragOut(handle, x, y);
+        dragging.target = newTarget;
+      }
+
+      if (newTarget !== null) {
+        newTarget.onDragOver(handle, x, y);
+      }
     });
   }
 
-  updateTarget() {
-    // The timer has expired update the target with the drag state
-    const { handle, dragX, dragY } = this.state;
-    this.timer = null;
-
-    // Check for available dropTargets and return one that is available
-    const target = this._findTarget(handle, dragX, dragY);
-    if (target != this.target) {
-      if (this.target != null) {
-        this.target.onDragOut(handle, dragX, dragY);
-      }
-
-      this.target = target;
-    }
-
-    if (target != null) {
-      target.onDragOver(handle, dragX, dragY);
-    }
-  }
-
-  endDrag(handle, x, y) {
-    // Clear any timer that might have been initialized during drag
-    if (this.timer !== null) {
-      clearTimeout(this.timer);
-      this.timer = null;
-    }
-
-    let res = false;
-    if (this.target != null) {
-      this.target.onDragRelease(handle, x, y);
-      res = true;
-    }
-
-    this.state.dragX = this.state.dragY = null;
-    this.state.handle = null;
-    this.target = null;
-
-    if (this.state.drag != null) {
-      this.setState({
-        drag: null,
-      });
-    };
-
-    return res;
-  }
-
   render() {
-    const { drag, dragX, dragY } = this.state;
     return (
       <View style={this.props.style}>
         { this.props.children }
-        <DragObject ref="drag" object={drag} x={dragX} y={dragY} />
+        <DragObject ref="drag" />
       </View>
     );
   }
@@ -229,11 +195,5 @@ DragDropContext.defaultProps = {
 DragDropContext.childContextTypes = {
   dragDropContext: PropTypes.object,
 };
-
-const styles = StyleSheet.create({
-  holder: {
-    position: 'absolute',
-  },
-});
 
 export default DragDropContext;

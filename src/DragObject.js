@@ -7,50 +7,42 @@ class DragObject extends Component {
     super(props);
 
     this.state = {
-      object: null,
+      element: null,
       x: null,
       y: null,
     };
   }
 
-  componentWillReceiveProps(props) {
-    this.setState({
-      object: props.object,
-      x: props.x,
-      y: props.y,
-    });
-  }
-
-  updatePosition(x, y) {
-    // Might need this to update the position of the object natively
-    // Directly setting the coordinates, skipping the
-    // react render flow
-    this.state.x = x;
-    this.state.y = y;
-
-    this.refs.drag.setNativeProps({
-      style: {
-        left: x,
-        top: y,
-      },
-    });
+  update(x, y, element) {
+    if (this.state.element !== element) {
+      this.setState({
+        element, x, y,
+      });
+    } else {
+      this.state.x = x;
+      this.state.y = y;
+      this.refs.view.setNativeProps({
+        style: {
+          left: x,
+          top: y,
+        },
+      });
+    }
   }
 
   render() {
-    const { object, x, y } = this.state;
-
-    // If there isn't any object to drag just leave
-    if (object === null) {
+    const { element, x, y } = this.state;
+    if (element === null) {
       return null;
     }
 
     return (
-      <View ref="drag" style={{
+      <View ref="view" style={{
         position: 'absolute',
         left: x,
         top: y,
       }}>
-        <object.Component {...object.props} />
+        {element}
       </View>
     );
   }

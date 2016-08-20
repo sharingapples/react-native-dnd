@@ -1,126 +1,124 @@
 'use strict';
 
 import React, { Component, PropTypes } from 'react';
-import { View, PanResponder, NativeMethodsMixin } from 'react-native';
+import { View, PanResponder } from 'react-native';
 
-const DragSource = React.createClass({
-  mixins: [NativeMethodsMixin],
+class DragSource extends Component {
+  constructor(props) {
+    super(props);
 
-  getInitialState() {
     this.panResponder = PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onPanResponderGrant: this.onDragStart,
-      onPanResponderMove: this.onDragMove,
-      onPanResponderRelease: this.onDragEnd,
+      onPanResponderGrant: this.onDragStart.bind(this),
+      onPanResponderMove: this.onDragMove.bind(this),
+      onPanResponderRelease: this.onDragEnd.bind(this),
     });
-    this.dragHandle = null;
-    this.dragPos = null;
-    return null;
-  },
 
-  onLayout() {
-    if (this.props.onLayout) {
-      this.refs.view.measure((x, y, width, height, pageX, pageY) => {
-        this.props.onLayout({
-          left: pageX,
-          top: pageY,
-          width: width,
-          height: height,
-        });
-      });
-    }
-  },
+    this.dragHandle = null;
+  }
+
+  measure(callback) {
+    this.refs.view.measure(callback);
+  }
+
+  componentWillUnmount() {
+    // stop any dragging
+    this.stopDrag();
+  }
 
   // The drag has started on the element
   onDragStart(e, gesture) {
     // Keep the coordinates where the drag started.
-    const[x, y] = [
+    const[px, py] = [
       gesture.x0 * this.context.dragDropContext.scale,
       gesture.y0 * this.context.dragDropContext.scale,
     ];
-    this.dragHandle = this.props.getDragHandle(x, y);
-    this.dragStartX = x;
-    this.dragStartY = y;
-    this.dragPos = [x, y];
-    this.dragged = false;  // The drag is not considered yet
-  },
 
-  updateHandle() {
-    this.dragHandle = this.props.getDragHandle(this.dragStartX, this.dragStartY);
-    this.context.dragDropContext.updateHandle(this.dragHandle);
-  },
+    Promise.resolve(this.props.getDragHandle(px, py)).then(handle => {
+      if (handle !== null) {
+        this._dragging = {
+          handle: handle,
+          element: this.props.getDragElement(handle),
+          startX: px,
+          startY: py,
+          x: px,
+          y: py,
+        };
+
+        this.props.onDragStart && this.props.onDragStart(handle, px, py);
+        this.context.dragDropContext.startDrag(this._dragging, px, py);
+      }
+    });
+  }
 
   // The drag has taken place
   onDragMove(e, gesture) {
-    console.log('DragSource::onDragMove');
-    if (this.dragHandle === null) {
-      return;
-    }
+    if (this._dragging) {
+      // Get the drag coordinates
+      const [x, y] = [
+        gesture.moveX * this.context.dragDropContext.scale,
+        gesture.moveY * this.context.dragDropContext.scale,
+      ];
 
-    // Consider the drag has started
-    if (!this.dragged) {
-      this.dragged = true;
-      this.props.onDragStart(this.dragHandle, this.dragStartX, this.dragStartY);
-      this.context.dragDropContext.startDrag(
-          this.dragHandle, this.dragStartX, this.dragStartY);
-    }
+      this._dragging.x = x;
+      this._dragging.y = y;
 
-    // Do the first move
-    const [x, y] = [
-      gesture.moveX * this.context.dragDropContext.scale,
-      gesture.moveY * this.context.dragDropContext.scale,
-    ];
-    this.dragPos = [x, y];
-    this.context.dragDropContext.updateDrag(this.dragHandle, x, y);
-  },
+      // Update the dragging object
+      this.context.dragDropContext.updateDrag(this._dragging);
+    }
+  }
+
+  // The drag has ended now
+  onDragEnd(e, gesture) {
+    if (this._dragging) {
+      // Get the drag coordinates
+      const [x, y] = [
+        gesture.moveX * this.context.dragDropContext.scale,
+        gesture.moveY * this.context.dragDropContext.scale,
+      ];
+
+      this._dragging.x = x;
+      this._dragging.y = y;
+
+      // Do the stopping
+      this.stopDrag(this._dragging);
+    }
+  }
 
   /**
    * Helper method to end the dragging abruptly, without the PanResponder
    * @return
    */
   stopDrag() {
-    if (this.dragged) {
-      this.dragged = false;
-      this.props.onDragEnd(this.dragHandle,
-          !this.context.dragDropContext.endDrag(this.dragHandle,
-            this.dragPos[0], this.dragPos[1])
-      );
+    if (this._dragging) {
+      const handle = this._dragging.handle;
+      this.context.dragDropContext.endDrag(this._dragging).then(cancelled => {
+        this.props.onDragEnd(handle, cancelled);
+      });
+      this._dragging = null;
     }
-  },
-
-  // The drag has end now
-  onDragEnd(e, gesture) {
-    if (this.dragged) {
-      this.dragged = false;
-      const [x, y] = [
-        gesture.moveX * this.context.dragDropContext.scale,
-        gesture.moveY * this.context.dragDropContext.scale,
-      ];
-      this.props.onDragEnd(this.dragHandle,
-          !this.context.dragDropContext.endDrag(this.dragHandle, x, y));
-    }
-  },
+  }
 
   render() {
     return (
-      <View ref="view" {...this.props} onLayout={this.onLayout}
+      <View ref="view" {...this.props}
           {...this.panResponder.panHandlers} pointerEvents="box-only">
         { this.props.children }
       </View>
     );
-  },
+  }
+}
 
-  contextTypes: {
-    dragDropContext: React.PropTypes.object.isRequired,
-  },
+DragSource.contextTypes = {
+  dragDropContext: React.PropTypes.object.isRequired,
+};
 
-  propTypes: {
-    style: View.propTypes.style,
-    onLayout: PropTypes.func,
-    getDragHandle: PropTypes.func.isRequired,
-    onDragStart: PropTypes.func.isRequired,
-    onDragEnd: PropTypes.func.isRequired,
-  },
-});
+DragSource.propTypes = {
+  style: View.propTypes.style,
+  getDragHandle: PropTypes.func.isRequired,
+  getDragElement: PropTypes.func.isRequired,
+  onDragStart: PropTypes.func.isRequired,
+  onDragEnd: PropTypes.func.isRequired,
+};
 
 export default DragSource;
