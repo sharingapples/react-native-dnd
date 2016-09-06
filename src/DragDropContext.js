@@ -184,7 +184,6 @@ class DragDropContext extends Component {
 
 DragDropContext.propTypes = {
   style: View.propTypes.style,
-  getDragObject: PropTypes.func.isRequired,
   scale: PropTypes.number,
 };
 
