@@ -12,6 +12,7 @@ class DragSource extends Component {
       onPanResponderGrant: this.onDragStart.bind(this),
       onPanResponderMove: this.onDragMove.bind(this),
       onPanResponderRelease: this.onDragEnd.bind(this),
+      onPanResponderTerminate: this.onDragEnd.bind(this),
     });
 
     this.dragHandle = null;
