@@ -134,7 +134,11 @@ class DragDropContext extends Component {
       // Release the drag
       const { handle, target, x, y } = dragging;
       if (target) {
-        target.onDragRelease(handle, x, y);
+        if (target.onDragRelease(handle, x, y) === false) {
+          // The drag was cancelled
+          return true;
+        }
+
         // The drag was not cancelled
         return false;
       } else {

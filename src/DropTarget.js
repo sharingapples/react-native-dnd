@@ -26,7 +26,7 @@ class DropTarget extends React.Component {
   }
 
   onDragRelease(handle, x, y) {
-    this.props.onDragRelease(handle, x, y);
+    return this.props.onDragRelease(handle, x, y);
   }
 
   render() {
