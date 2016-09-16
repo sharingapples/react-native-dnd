@@ -74,8 +74,8 @@ class DragDropContext extends Component {
    * Helper method based on promise to find the target for the given
    * dragging input
    */
-  _findTarget(dragging) {
-    const { handle, x, y }  = dragging;
+  _findTarget(dragging, x, y) {
+    const { handle }  = dragging;
     return Promise.all(
       this._dropTargets.map(target => target.contains(handle, x, y))
     ).then(res => {
@@ -90,16 +90,16 @@ class DragDropContext extends Component {
    * @param  {number} x      [description]
    * @param  {number} y      [description]
    */
-  startDrag(dragging) {
+  startDrag(dragging, x, y) {
     // Update the drag UI
-    const { x, y, element } = dragging;
+    const { element } = dragging;
     this.refs.drag.update(x, y, element);
 
     // get the target
     this._updateTarget(dragging);
   }
 
-  updateDrag(dragging) {
+  updateDrag(dragging, x, y) {
     // Clear out any pending timeout because of a previous drag
     if (this._timer != null) {
       clearTimeout(this._timer);
@@ -108,10 +108,10 @@ class DragDropContext extends Component {
     // Start the drag timer. Using this timer to make the drag
     // as smooth as possible, by defering the processing to a
     // later point when the user keeps the drag still
-    this._timer = setTimeout(this._updateTarget.bind(this, dragging), DRAG_IMPL_TIMER);
+    this._timer = setTimeout(this._updateTarget.bind(this, dragging, x, y), DRAG_IMPL_TIMER);
 
     // Update the drag UI
-    const { x, y, element } = dragging;
+    const { element } = dragging;
     this.refs.drag.update(x, y, element);
   }
 
@@ -119,7 +119,7 @@ class DragDropContext extends Component {
    * Ends the current drag
    * @return true if the drag ended on some target
    */
-  endDrag(dragging) {
+  endDrag(dragging, x, y) {
     // Clear the drag UI
     this.refs.drag.update(null, null, null);
 
@@ -130,9 +130,9 @@ class DragDropContext extends Component {
     }
 
     // Update the target
-    return this._updateTarget(dragging).then(() => {
+    return this._updateTarget(dragging, x, y).then(() => {
       // Release the drag
-      const { handle, target, x, y } = dragging;
+      const { handle, target } = dragging;
       if (target) {
         if (target.onDragRelease(handle, x, y) === false) {
           // The drag was cancelled
@@ -156,13 +156,13 @@ class DragDropContext extends Component {
     }
   }
 
-  _updateTarget(dragging) {
+  _updateTarget(dragging, x, y) {
     // The timer has expired update the target with the drag state
-    const { handle, target, x, y } = dragging;
+    const { handle, target } = dragging;
     this._timer = null;
 
     // Check if there is any change in the drop target
-    return this._findTarget(dragging).then(newTarget => {
+    return this._findTarget(dragging, x, y).then(newTarget => {
       if (target !== newTarget) {
         // Do the DragOut event on the older target
         if (target)

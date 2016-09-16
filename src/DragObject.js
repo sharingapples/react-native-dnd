@@ -18,7 +18,7 @@ class DragObject extends Component {
       this.setState({
         element, x, y,
       });
-    } else {
+    } else if (this.state.element !== null) {
       this.state.x = x;
       this.state.y = y;
       this.refs.view.setNativeProps({

@@ -15,7 +15,7 @@ class DragSource extends Component {
       onPanResponderTerminate: this.onDragEnd.bind(this),
     });
 
-    this.dragHandle = null;
+    this._dragging = null;
   }
 
   measure(callback) {
@@ -35,6 +35,16 @@ class DragSource extends Component {
       gesture.y0 * this.context.dragDropContext.scale,
     ];
 
+    this._lastX = px;
+    this._lastY = py;
+
+    // If another drag is in process, ignore the start
+    if (this._dragging !== null) {
+      return;
+    }
+
+    this._dragging = false;
+
     Promise.resolve(this.props.getDragHandle(px, py)).then(handle => {
       if (handle !== null) {
         this._dragging = {
@@ -42,12 +52,12 @@ class DragSource extends Component {
           element: this.props.getDragElement(handle),
           startX: px,
           startY: py,
-          x: px,
-          y: py,
         };
 
         this.props.onDragStart && this.props.onDragStart(handle, px, py);
         this.context.dragDropContext.startDrag(this._dragging, px, py);
+      } else {
+        this._dragging = null;
       }
     });
   }
@@ -61,11 +71,11 @@ class DragSource extends Component {
         gesture.moveY * this.context.dragDropContext.scale,
       ];
 
-      this._dragging.x = x;
-      this._dragging.y = y;
+      this._lastX = x;
+      this._lastY = y;
 
       // Update the dragging object
-      this.context.dragDropContext.updateDrag(this._dragging);
+      this.context.dragDropContext.updateDrag(this._dragging, x, y);
     }
   }
 
@@ -78,11 +88,11 @@ class DragSource extends Component {
         gesture.moveY * this.context.dragDropContext.scale,
       ];
 
-      this._dragging.x = x;
-      this._dragging.y = y;
+      this._lastX = x;
+      this._lastY = y;
 
       // Do the stopping
-      this.stopDrag(this._dragging);
+      this.stopDrag();
     }
   }
 
@@ -91,12 +101,17 @@ class DragSource extends Component {
    * @return
    */
   stopDrag() {
-    if (this._dragging) {
-      const handle = this._dragging.handle;
-      this.context.dragDropContext.endDrag(this._dragging).then(cancelled => {
+    let x = this._lastX;
+    let y = this._lastY;
+
+    const dragging = this._dragging;
+    this._dragging = null;
+
+    if (dragging) {
+      const handle = dragging.handle;
+      this.context.dragDropContext.endDrag(dragging, x, y).then(cancelled => {
         this.props.onDragEnd(handle, cancelled);
       });
-      this._dragging = null;
     }
   }
 
