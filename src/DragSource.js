@@ -15,7 +15,8 @@ class DragSource extends Component {
       onPanResponderTerminate: this.onDragEnd.bind(this),
     });
 
-    this._dragging = null;
+    this._dragStarted = null;
+    this._dragHandle = null;
   }
 
   measure(callback) {
@@ -29,8 +30,10 @@ class DragSource extends Component {
 
   // The drag has started on the element
   onDragStart(e, gesture) {
+    console.log('Drag::onDragStart');
+
     // Keep the coordinates where the drag started.
-    const[px, py] = [
+    const [px, py] = [
       gesture.x0 * this.context.dragDropContext.scale,
       gesture.y0 * this.context.dragDropContext.scale,
     ];
@@ -39,32 +42,36 @@ class DragSource extends Component {
     this._lastY = py;
 
     // If another drag is in process, ignore the start
-    if (this._dragging !== null) {
+    if (this._dragStarted) {
       return;
     }
 
-    this._dragging = false;
-
-    Promise.resolve(this.props.getDragHandle(px, py)).then(handle => {
-      if (handle !== null) {
-        this._dragging = {
-          handle: handle,
+    this._dragStarted = Promise.resolve(this.props.getDragHandle(px, py)).then(handle => {
+      if (handle) {
+        this._dragHandle = {
+          handle,
           element: this.props.getDragElement(handle),
           startX: px,
           startY: py,
         };
 
-        this.props.onDragStart && this.props.onDragStart(handle, px, py);
-        this.context.dragDropContext.startDrag(this._dragging, px, py);
+        if (this.props.onDragStart) {
+          this.props.onDragStart(handle, px, py);
+        }
+
+        this.context.dragDropContext.startDrag(this._dragHandle, px, py);
+
+        return this._dragHandle;
       } else {
-        this._dragging = null;
+        return null;
       }
     });
   }
 
   // The drag has taken place
   onDragMove(e, gesture) {
-    if (this._dragging) {
+    console.log('Drag::onDragMove');
+    if (this._dragHandle) {
       // Get the drag coordinates
       const [x, y] = [
         gesture.moveX * this.context.dragDropContext.scale,
@@ -75,25 +82,25 @@ class DragSource extends Component {
       this._lastY = y;
 
       // Update the dragging object
-      this.context.dragDropContext.updateDrag(this._dragging, x, y);
+      this.context.dragDropContext.updateDrag(this._dragHandle, x, y);
     }
   }
 
   // The drag has ended now
   onDragEnd(e, gesture) {
-    if (this._dragging) {
-      // Get the drag coordinates
-      const [x, y] = [
-        gesture.moveX * this.context.dragDropContext.scale,
-        gesture.moveY * this.context.dragDropContext.scale,
-      ];
+    console.log('Drag::onDragEnd');
 
-      this._lastX = x;
-      this._lastY = y;
+    // Get the drag coordinates
+    const [x, y] = [
+      gesture.moveX * this.context.dragDropContext.scale,
+      gesture.moveY * this.context.dragDropContext.scale,
+    ];
 
-      // Do the stopping
-      this.stopDrag();
-    }
+    this._lastX = x;
+    this._lastY = y;
+
+    // Do the stopping
+    this.stopDrag();
   }
 
   /**
@@ -101,16 +108,17 @@ class DragSource extends Component {
    * @return
    */
   stopDrag() {
-    let x = this._lastX;
-    let y = this._lastY;
+    const x = this._lastX;
+    const y = this._lastY;
 
-    const dragging = this._dragging;
-    this._dragging = null;
-
-    if (dragging) {
-      const handle = dragging.handle;
-      this.context.dragDropContext.endDrag(dragging, x, y).then(cancelled => {
-        this.props.onDragEnd(handle, cancelled);
+    if (this._dragStarted) {
+      const start = this._dragStarted;
+      this._dragStarted = null;
+      this._dragHandle = null;
+      start.then(drag => {
+        return this.context.dragDropContext.endDrag(drag, x, y).then(cancelled => {
+          this.props.onDragEnd(drag.handle, cancelled);
+        });
       });
     }
   }
