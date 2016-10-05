@@ -30,8 +30,6 @@ class DragSource extends Component {
 
   // The drag has started on the element
   onDragStart(e, gesture) {
-    console.log('Drag::onDragStart');
-
     // Keep the coordinates where the drag started.
     const [px, py] = [
       gesture.x0 * this.context.dragDropContext.scale,
@@ -63,6 +61,7 @@ class DragSource extends Component {
 
         return this._dragHandle;
       } else {
+        this._dragHandle = null;
         return null;
       }
     });
@@ -70,7 +69,6 @@ class DragSource extends Component {
 
   // The drag has taken place
   onDragMove(e, gesture) {
-    console.log('Drag::onDragMove');
     if (this._dragHandle) {
       // Get the drag coordinates
       const [x, y] = [
@@ -88,8 +86,6 @@ class DragSource extends Component {
 
   // The drag has ended now
   onDragEnd(e, gesture) {
-    console.log('Drag::onDragEnd');
-
     // Get the drag coordinates
     const [x, y] = [
       gesture.moveX * this.context.dragDropContext.scale,
@@ -116,9 +112,11 @@ class DragSource extends Component {
       this._dragStarted = null;
       this._dragHandle = null;
       start.then(drag => {
-        return this.context.dragDropContext.endDrag(drag, x, y).then(cancelled => {
-          this.props.onDragEnd(drag.handle, cancelled);
-        });
+        if (drag) {
+          return this.context.dragDropContext.endDrag(drag, x, y).then(cancelled => {
+            this.props.onDragEnd(drag.handle, cancelled);
+          });
+        }
       });
     }
   }
