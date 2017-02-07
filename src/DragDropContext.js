@@ -16,187 +16,125 @@
  *      * onDragOut
  *      * onDragRelease
  */
-'use strict';
-
 import React, { Component, PropTypes } from 'react';
-import { View, StyleSheet } from 'react-native';
-import DragObject from './DragObject';
-
-// The number of milliseconds after which the drag over event is called
-const DRAG_IMPL_TIMER = 5;
+import { View, Animated } from 'react-native';
 
 class DragDropContext extends Component {
+  static propTypes = {
+    children: PropTypes.oneOfType([
+      PropTypes.element,
+      PropTypes.arrayOf(PropTypes.element),
+    ]).isRequired,
+  };
+
+  static childContextTypes = {
+    pan: PropTypes.instanceOf(Animated.ValueXY).isRequired,
+    registerDropTarget: PropTypes.func.isRequired,
+    startDrag: PropTypes.func.isRequired,
+  }
+
   constructor(props, context) {
     super(props, context);
     this._dropTargets = [];
-    this._timer = null;
-  }
+    this._drag = null;
+    this.state = {
+      dragging: null,
+      target: null,
+      pan: new Animated.ValueXY(),
+    };
 
-  /**
-   * Retrieve the scale factor of the underlying view that renders all the
-   * drag sources and drop targets
-   * @return {number} A scale which is by default 1
-   */
-  get scale() {
-    return this.props.scale;
+    this.isDragging = false;
+    this.dropTarget = null;
+
+    this.state.pan.addListener((value) => {
+      if (this.isDragging) {
+        this._updateDropTarget(value.x, value.y);
+      }
+    });
   }
 
   /* React method for providing the context for DragSource and DragTarget */
   getChildContext() {
     return {
-      dragDropContext: this,
+      pan: this.state.pan,
+
+      registerDropTarget: (target) => {
+        this._dropTargets.push(target);
+        return () => {
+          this._dropTargets = this._dropTargets.filter(t => t !== target);
+        };
+      },
+
+      startDrag: (handle, x, y) => {
+        this.isDragging = true;
+        this.dropTarget = null;
+
+        this._updateDropTarget(x, y);
+
+        // this.state.pan.setValue(handle.value);
+        this.state.pan.setOffset(handle.offset);
+
+        this.setState({
+          dragging: handle,
+        });
+
+        // Return a drag ender method
+        return () => {
+          this.isDragging = false;
+          this.setState({
+            dragging: null,
+          }, () => this.state.pan.setValue({ x: 0, y: 0 }));
+
+          const params = {
+            handle: this.state.dragging,
+            x: this.state.pan.x.__getValue(), // eslint-disable-line no-underscore-dangle
+            y: this.state.pan.y.__getValue(), // eslint-disable-line no-underscore-dangle
+          };
+
+          if (this.dropTarget) {
+            this.dropTarget.onDrop(params);
+          }
+
+          return {
+            complete: !!this.dropTarget,
+            params,
+          };
+        };
+      },
     };
   }
 
-  /* Method invoked by DropTarget for registration */
-  register(target) {
-    // Order the target based on the zIndex, Keep the target with the higher
-    // zIndex at the beginning, if the target has the same zIndex as the existing
-    // target, it must be inserted at the end of the targets with the same
-    // zIndex
-    this._dropTargets.push(target);
+  _updateDropTarget(x, y) {
+    const params = { handle: this.state.dragging, x, y };
+    const target = this._dropTargets.find(t => t.contains(params));
 
-    // order by zIndex in descending order,
-    this._dropTargets.sort((a, b) => ((b.props.zIndex || 0) - (a.props.zIndex || 0)));
-  }
-
-  /* Method invoked by DragTarget for removal */
-  unregister(target) {
-    const idx = this._dropTargets.indexOf(target);
-    if (idx !== -1) {
-      this._dropTargets.splice(idx, 1);
-    } else if (__DEV__) {
-      console.error('Unregistering target from a DragDropContext that has\'t been registered');
-    }
-  }
-
-  /**
-   * Helper method based on promise to find the target for the given
-   * dragging input
-   */
-  _findTarget(dragging, x, y) {
-    const { handle }  = dragging;
-    return Promise.all(
-      this._dropTargets.map(target => target.contains(handle, x, y))
-    ).then(res => {
-      const idx = res.indexOf(true);
-      return idx === -1 ? null : this._dropTargets[idx];
-    });
-  }
-
-  /**
-   * Drag start event. Called from DragSource. The method is respon
-   * @param  {object} handle The object that is being dragged
-   * @param  {number} x      [description]
-   * @param  {number} y      [description]
-   */
-  startDrag(dragging, x, y) {
-    // Update the drag UI
-    const { element } = dragging;
-    this.refs.drag.update(x, y, element);
-
-    // get the target
-    this._updateTarget(dragging);
-  }
-
-  updateDrag(dragging, x, y) {
-    // Clear out any pending timeout because of a previous drag
-    if (this._timer != null) {
-      clearTimeout(this._timer);
-    }
-
-    // Start the drag timer. Using this timer to make the drag
-    // as smooth as possible, by defering the processing to a
-    // later point when the user keeps the drag still
-    this._timer = setTimeout(this._updateTarget.bind(this, dragging, x, y), DRAG_IMPL_TIMER);
-
-    // Update the drag UI
-    const { element } = dragging;
-    this.refs.drag.update(x, y, element);
-  }
-
-  /**
-   * Ends the current drag
-   * @return true if the drag ended on some target
-   */
-  endDrag(dragging, x, y) {
-    // Clear the drag UI
-    this.refs.drag.update(null, null, null);
-
-    // Clear any timer that might have been initialized during drag
-    if (this._timer !== null) {
-      clearTimeout(this._timer);
-      this._timer = null;
-    }
-
-    // Update the target
-    return this._updateTarget(dragging, x, y).then(() => {
-      // Release the drag
-      const { handle, target } = dragging;
-      if (target) {
-        if (target.onDragRelease(handle, x, y) === false) {
-          // The drag was cancelled
-          return true;
-        }
-
-        // The drag was not cancelled
-        return false;
-      } else {
-        // the drag was cancelled
-        return true;
+    if (target !== this.dropTarget) {
+      if (this.dropTarget) {
+        this.dropTarget.onDragOut(params);
       }
-    });
-  }
-
-  componentWillUnmount() {
-    // Free the timer if there was any set
-    if (this._timer != null) {
-      clearTimeout(this._timer);
-      this._timer = null;
+      this.dropTarget = target;
+      if (this.dropTarget) {
+        this.dropTarget.onDragIn(params);
+      }
+    } else if (this.dropTarget) {
+      this.dropTarget.onDragOver(params);
     }
-  }
-
-  _updateTarget(dragging, x, y) {
-    // The timer has expired update the target with the drag state
-    const { handle, target } = dragging;
-    this._timer = null;
-
-    // Check if there is any change in the drop target
-    return this._findTarget(dragging, x, y).then(newTarget => {
-      if (target !== newTarget) {
-        // Do the DragOut event on the older target
-        if (target)
-          target.onDragOut(handle, x, y);
-        dragging.target = newTarget;
-      }
-
-      if (newTarget !== null) {
-        newTarget.onDragOver(handle, x, y);
-      }
-    });
   }
 
   render() {
+    const { dragging, pan } = this.state;
+    const { children } = this.props;
+
     return (
-      <View style={this.props.style}>
-        { this.props.children }
-        <DragObject ref="drag" />
+      <View {...this.props}>
+        { children }
+        { dragging &&
+          <Animated.View style={{ position: 'absolute', transform: pan.getTranslateTransform() }}>
+            {dragging.element}
+          </Animated.View> }
       </View>
     );
   }
 }
-
-DragDropContext.propTypes = {
-  style: View.propTypes.style,
-  scale: PropTypes.number,
-};
-
-DragDropContext.defaultProps = {
-  scale: 1,
-};
-
-DragDropContext.childContextTypes = {
-  dragDropContext: PropTypes.object,
-};
 
 export default DragDropContext;

@@ -5,5 +5,5 @@ import DropTarget from './DropTarget';
 export {
   DragDropContext,
   DragSource,
-  DropTarget
+  DropTarget,
 };
